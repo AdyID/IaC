@@ -37,7 +37,7 @@ jobs:
             working_directory: infra
             format: json
             out: tfsec-results.json
-            soft_fail: true
+            soft_fail: true #neccesarry to avoid failing the workflow at this step to test the github actions
   
       - name: Display tfsec results summary
         run: |
