@@ -73,22 +73,22 @@ variable "desired_count" {
   description = "Desired number of ECS service instances"
 }
 
-variable "target_group_arn" {
-  type        = string
-  description = "ARN of the ALB Target Group"
-}
+# variable "target_group_arn" {
+#   type        = string
+#   description = "ARN of the ALB Target Group"
+# }
 
-variable "private_subnet_ids" {
-  type        = list(string)
-  description = "Private subnet IDs for ECS tasks"
-}
+# variable "private_subnet_ids" {
+#   type        = list(string)
+#   description = "Private subnet IDs for ECS tasks"
+# }
 
-variable "ecs_service_sg_id" {
-  type        = string
-  description = "Security Group ID for ECS service"
-}
+# variable "ecs_service_sg_id" {
+#   type        = string
+#   description = "Security Group ID for ECS service"
+# }
 
-variable "alb_listener_arn" {
-  type        = string
-  description = "Listener ARN to depend on for ordering"
-}
+# variable "alb_listener_arn" {
+#   type        = string
+#   description = "Listener ARN to depend on for ordering"
+# }

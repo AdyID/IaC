@@ -14,7 +14,6 @@ task_cpu      = 512
 task_memory   = 1024
 desired_count = 3
 
-image_tag        = "v1"
 log_level        = "INFO"
 greeting_message = "Welcome to the PhaseTree code challenge interview production!"
 app_version      = "1.0.0"

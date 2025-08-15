@@ -75,7 +75,7 @@ module "ecs" {
   ecr_repository_url = module.ecr.repository_url
   log_group_name     = module.logs.log_group_name
 
-  desired_count       = var.desired_count
+  desired_count = var.desired_count
   # private_subnet_ids  = module.vpc.private_subnet_ids
   # ecs_service_sg_id   = module.alb.ecs_service_sg_id
   # target_group_arn    = module.alb.target_group_arn
