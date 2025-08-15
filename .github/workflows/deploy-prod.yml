@@ -72,6 +72,15 @@ jobs:
           terraform import -var-file=prod.tfvars module.logs.aws_cloudwatch_log_group.ecs_app adrian-applogs/production/iac-phase-tree 2>/dev/null || echo "Log group already in state or doesn't exist"
         working-directory: infra
 
+      - name: Import existing IAM roles (if exist)
+        run: |
+          set +e
+          terraform import -var-file=prod.tfvars module.iam.aws_iam_role.ecs_task_execution_role iac-phase-tree-production-execution-role 2>/dev/null || echo "Execution role already in state or doesn't exist"
+          terraform import -var-file=prod.tfvars module.iam.aws_iam_role.ecs_task_role iac-phase-tree-production-task-role 2>/dev/null || echo "Task role already in state or doesn't exist"
+          terraform import -var-file=prod.tfvars module.iam.aws_iam_role.ecs_task_execution_role_v2 iac-phase-tree-production-execution-role-v2 2>/dev/null || echo "Execution role v2 already in state or doesn't exist"
+          terraform import -var-file=prod.tfvars module.iam.aws_iam_role.ecs_task_role_v2 iac-phase-tree-production-task-role-v2 2>/dev/null || echo "Task role v2 already in state or doesn't exist"
+        working-directory: infra
+
       - name: Terraform Apply (Prod)
         run: |
           set +e
