@@ -49,41 +49,6 @@ jobs:
         run: terraform init
         working-directory: infra
 
-      - name: Get ECR Repo URL from Terraform
-        id: ecr
-        run: |
-          # Check if terraform state exists and has outputs
-          if terraform output -json > /dev/null 2>&1; then
-            ECR_URL=$(terraform output -raw ecr_repository_url)
-            echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
-            echo "Using existing ECR repository: $ECR_URL"
-          else
-            echo "No Terraform state found. Will create ECR repository during apply."
-            # Set a placeholder - will be updated after terraform apply
-            echo "ECR_URL=placeholder" >> $GITHUB_ENV
-          fi
-        working-directory: infra
-
-      - name: Log in to Amazon ECR
-        run: |
-          if [ "$ECR_URL" != "placeholder" ]; then
-            aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin $ECR_URL
-          else
-            echo "Skipping ECR login - repository will be created during terraform apply"
-          fi
-
-      - name: Build and Push Docker Image
-        if: env.ECR_URL != 'placeholder'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.ECR_URL }}:${{ env.IMAGE_TAG }}
-            ${{ env.ECR_URL }}:${{ github.sha }}  # commit hash tag for traceability
-          cache-from: type=registry,ref=${{ env.ECR_URL }}:cache
-          cache-to: type=registry,ref=${{ env.ECR_URL }}:cache,mode=max
-
       - name: Terraform Apply (Dev)
         run: |
           set +e
@@ -98,16 +63,19 @@ jobs:
           fi
         working-directory: infra
 
-      - name: Get ECR URL after apply
-        if: env.ECR_URL == 'placeholder'
+      - name: Get ECR Repo URL from Terraform
+        id: ecr
         run: |
           ECR_URL=$(terraform output -raw ecr_repository_url)
           echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
-          echo "ECR repository created: $ECR_URL"
+          echo "ECR repository URL: $ECR_URL"
         working-directory: infra
 
-      - name: Build and Push Docker Image (after apply)
-        if: env.ECR_URL != 'placeholder' && env.ECR_URL != ''
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin $ECR_URL
+
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
