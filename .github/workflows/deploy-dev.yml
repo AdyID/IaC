@@ -47,6 +47,7 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+        working-directory: infra
 
       - name: Get ECR Repo URL from Terraform
         id: ecr
@@ -61,6 +62,7 @@ jobs:
             # Set a placeholder - will be updated after terraform apply
             echo "ECR_URL=placeholder" >> $GITHUB_ENV
           fi
+        working-directory: infra
 
       - name: Log in to Amazon ECR
         run: |
@@ -94,6 +96,7 @@ jobs:
               echo "::error ::$error_msg"
               exit $status
           fi
+        working-directory: infra
 
       - name: Get ECR URL after apply
         if: env.ECR_URL == 'placeholder'
@@ -101,6 +104,7 @@ jobs:
           ECR_URL=$(terraform output -raw ecr_repository_url)
           echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
           echo "ECR repository created: $ECR_URL"
+        working-directory: infra
 
       - name: Build and Push Docker Image (after apply)
         if: env.ECR_URL != 'placeholder' && env.ECR_URL != ''
