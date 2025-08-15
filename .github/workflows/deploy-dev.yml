@@ -49,6 +49,18 @@ jobs:
         run: terraform init
         working-directory: infra
 
+      - name: Import existing ECR repository (if exists)
+        run: |
+          set +e
+          terraform import module.ecr.aws_ecr_repository.this iac-task-development 2>/dev/null || echo "ECR repository already in state or doesn't exist"
+        working-directory: infra
+
+      - name: Import existing CloudWatch log group (if exists)
+        run: |
+          set +e
+          terraform import module.logs.aws_cloudwatch_log_group.ecs_app adrian-applogs/development/iac-phase-tree 2>/dev/null || echo "Log group already in state or doesn't exist"
+        working-directory: infra
+
       - name: Terraform Apply (Dev)
         run: |
           set +e
