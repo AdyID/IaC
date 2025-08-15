@@ -31,31 +31,23 @@ jobs:
         with:
           terraform_version: 1.12.2
 
-      - name: Run tfsec and summarize compactly
+      - name: Run tfsec security scan
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+            working_directory: infra
+            format: json
+            out: tfsec-results.json
+            soft_fail: true
+  
+      - name: Display tfsec results summary
         run: |
-          set +e
-          tfsec . > tfsec_full.log 2>&1
-          status=$?
-
-          echo "===== TFSec Compact Summary ====="
-          grep -A 20 -E "^Result #[0-9]+" tfsec_full.log | \
-            awk '
-              /^Result/ { 
-                sev=$3; 
-              }
-              /ID / { 
-                id=$2; 
-              }
-              /^[[:space:]]+Impact/ { 
-                impact=$0; sub(/^[[:space:]]+Impact[[:space:]]+/, "", impact); 
-              }
-              /^[[:space:]]+Resolution/ { 
-                resolution=$0; sub(/^[[:space:]]+Resolution[[:space:]]+/, "", resolution); 
-                printf "%-6s %-40s – %s\n", sev, id, resolution;
-              }
-            ' || echo "No issues found."
-          echo "===== End of Summary ====="
-          exit $status
+            if [ -f tfsec-results.json ]; then
+              echo "===== TFSec Security Scan Results ====="
+              jq -r '.results[] | "\(.severity | ascii_upcase) - \(.rule_id): \(.description)"' tfsec-results.json | head -10
+              echo "===== End of Results ====="
+            else
+              echo "No security issues found by tfsec"
+            fi
 
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
