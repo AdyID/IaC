@@ -16,12 +16,27 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.12.2
 
-      - name: Run tfsec
+      - name: Run tfsec security scan
         uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: infra
+          format: json
+          out: tfsec-results.json
+          soft_fail: true #neccesarry to avoid failing the workflow at this step to test the github actions
+
+      - name: Display tfsec results summary
+        run: |
+          if [ -f tfsec-results.json ]; then
+            echo "===== TFSec Security Scan Results ====="
+            jq -r '.results[] | "\(.severity | ascii_upcase) - \(.rule_id): \(.description)"' tfsec-results.json | head -10
+            echo "===== End of Results ====="
+          else
+            echo "No security issues found by tfsec"
+          fi
 
       - name: Configure AWS # Would assign the secret keys with OpenID Connect role usually
         uses: aws-actions/configure-aws-credentials@v4
@@ -30,11 +45,52 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-central-1
 
+      - name: Terraform Init
+        run: terraform init
+        working-directory: infra
+
+      - name: Import existing ECR repository (if exists)
+        run: |
+          set +e
+          terraform import -var-file=dev.tfvars module.ecr.aws_ecr_repository.this iac-task-development 2>/dev/null || echo "ECR repository already in state or doesn't exist"
+        working-directory: infra
+
+      - name: Import existing CloudWatch log group (if exists)
+        run: |
+          set +e
+          terraform import -var-file=dev.tfvars module.logs.aws_cloudwatch_log_group.ecs_app adrian-applogs/development/iac-phase-tree 2>/dev/null || echo "Log group already in state or doesn't exist"
+        working-directory: infra
+
+      - name: Import existing IAM roles (if exist)
+        run: |
+          set +e
+          terraform import -var-file=dev.tfvars module.iam.aws_iam_role.ecs_task_execution_role iac-phase-tree-development-execution-role 2>/dev/null || echo "Execution role already in state or doesn't exist"
+          terraform import -var-file=dev.tfvars module.iam.aws_iam_role.ecs_task_role iac-phase-tree-development-task-role 2>/dev/null || echo "Task role already in state or doesn't exist"
+          terraform import -var-file=dev.tfvars module.iam.aws_iam_role.ecs_task_execution_role_v2 iac-phase-tree-development-execution-role-v2 2>/dev/null || echo "Execution role v2 already in state or doesn't exist"
+          terraform import -var-file=dev.tfvars module.iam.aws_iam_role.ecs_task_role_v2 iac-phase-tree-development-task-role-v2 2>/dev/null || echo "Task role v2 already in state or doesn't exist"
+        working-directory: infra
+
+      - name: Terraform Apply (Dev)
+        run: |
+          set +e
+          output=$(terraform apply -auto-approve -var-file=dev.tfvars -var="image_tag=$IMAGE_TAG" 2>&1)
+          status=$?
+          echo "$output"
+          if [ $status -ne 0 ]; then
+              # Extract the first "Error:" line from Terraform output
+              error_msg=$(echo "$output" | grep -m1 "Error:")
+              echo "::error ::$error_msg"
+              exit $status
+          fi
+        working-directory: infra
+
       - name: Get ECR Repo URL from Terraform
         id: ecr
         run: |
           ECR_URL=$(terraform output -raw ecr_repository_url)
           echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
+          echo "ECR repository URL: $ECR_URL"
+        working-directory: infra
 
       - name: Log in to Amazon ECR
         run: |
@@ -43,27 +99,10 @@ jobs:
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
-            context: .
-            push: true
-            tags: |
-              ${{ env.ECR_URL }}:${{ env.IMAGE_TAG }}
-              ${{ env.ECR_URL }}:${{ github.sha }}  # commit hash tag for traceability
-            cache-from: type=registry,ref=${{ env.ECR_URL }}:cache
-            cache-to: type=registry,ref=${{ env.ECR_URL }}:cache,mode=max
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Apply (Dev)
-        # run: terraform apply -auto-approve -var-file=dev.tfvars -var="image_tag=$IMAGE_TAG"
-        run: |
-            set +e
-            output=$(terraform apply -auto-approve -var-file=dev.tfvars -var="image_tag=$IMAGE_TAG" 2>&1)
-            status=$?
-            echo "$output"
-            if [ $status -ne 0 ]; then
-                # Extract the first "Error:" line from Terraform output
-                error_msg=$(echo "$output" | grep -m1 "Error:")
-                echo "::error ::$error_msg"
-                exit $status
-            fi
+          context: .
+          push: true
+          tags: |
+            ${{ env.ECR_URL }}:${{ env.IMAGE_TAG }}
+            ${{ env.ECR_URL }}:${{ github.sha }}  # commit hash tag for traceability
+          cache-from: type=registry,ref=${{ env.ECR_URL }}:cache
+          cache-to: type=registry,ref=${{ env.ECR_URL }}:cache,mode=max

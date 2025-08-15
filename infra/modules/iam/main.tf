@@ -26,8 +26,8 @@ resource "aws_iam_role_policy" "ecs_task_execution_policy" {
     Statement = [
       # ECR: pull images
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "ecr:GetAuthorizationToken",
           "ecr:BatchGetImage",
           "ecr:GetDownloadUrlForLayer"
@@ -36,8 +36,8 @@ resource "aws_iam_role_policy" "ecs_task_execution_policy" {
       },
       # CloudWatch Logs: write logs to this group
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
@@ -91,8 +91,8 @@ resource "aws_iam_role_policy" "ecs_task_execution_policy_v2" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "ecr:GetAuthorizationToken",
           "ecr:BatchGetImage",
           "ecr:GetDownloadUrlForLayer"
@@ -100,8 +100,8 @@ resource "aws_iam_role_policy" "ecs_task_execution_policy_v2" {
         Resource = var.ecr_repository_arn
       },
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]

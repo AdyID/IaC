@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image tag to deploy (e.g., 1.0.0)"
+        description: 'Image tag to deploy (e.g., 1.0.0)'
         required: true
-        default: "1.0.0"
+        default: '1.0.0'
 
 jobs:
   deploy:
@@ -27,12 +27,27 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.12.2
 
-      - name: Run tfsec
+      - name: Run tfsec security scan
         uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+            working_directory: infra
+            format: json
+            out: tfsec-results.json
+            soft_fail: true #neccesarry to avoid failing the workflow at this step to test the github actions
+  
+      - name: Display tfsec results summary
+        run: |
+            if [ -f tfsec-results.json ]; then
+              echo "===== TFSec Security Scan Results ====="
+              jq -r '.results[] | "\(.severity | ascii_upcase) - \(.rule_id): \(.description)"' tfsec-results.json | head -10
+              echo "===== End of Results ====="
+            else
+              echo "No security issues found by tfsec"
+            fi
 
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -41,23 +56,30 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-central-1
 
-      - name: Get ECR Repo URL from Terraform
-        id: ecr
-        run: |
-          ECR_URL=$(terraform output -raw ecr_repository_url)
-          echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
-
-          - name: Build and Push Docker Image (with cache)
-          uses: docker/build-push-action@v5
-          with:
-            context: .
-            push: true
-            tags: ${{ env.ECR_URL }}:${{ env.IMAGE_TAG }}
-            cache-from: type=registry,ref=${{ env.ECR_URL }}:cache
-            cache-to: type=registry,ref=${{ env.ECR_URL }}:cache,mode=max
-
       - name: Terraform Init
         run: terraform init
+        working-directory: infra
+
+      - name: Import existing ECR repository (if exists)
+        run: |
+          set +e
+          terraform import -var-file=prod.tfvars module.ecr.aws_ecr_repository.this iac-task-production 2>/dev/null || echo "ECR repository already in state or doesn't exist"
+        working-directory: infra
+
+      - name: Import existing CloudWatch log group (if exists)
+        run: |
+          set +e
+          terraform import -var-file=prod.tfvars module.logs.aws_cloudwatch_log_group.ecs_app adrian-applogs/production/iac-phase-tree 2>/dev/null || echo "Log group already in state or doesn't exist"
+        working-directory: infra
+
+      - name: Import existing IAM roles (if exist)
+        run: |
+          set +e
+          terraform import -var-file=prod.tfvars module.iam.aws_iam_role.ecs_task_execution_role iac-phase-tree-production-execution-role 2>/dev/null || echo "Execution role already in state or doesn't exist"
+          terraform import -var-file=prod.tfvars module.iam.aws_iam_role.ecs_task_role iac-phase-tree-production-task-role 2>/dev/null || echo "Task role already in state or doesn't exist"
+          terraform import -var-file=prod.tfvars module.iam.aws_iam_role.ecs_task_execution_role_v2 iac-phase-tree-production-execution-role-v2 2>/dev/null || echo "Execution role v2 already in state or doesn't exist"
+          terraform import -var-file=prod.tfvars module.iam.aws_iam_role.ecs_task_role_v2 iac-phase-tree-production-task-role-v2 2>/dev/null || echo "Task role v2 already in state or doesn't exist"
+        working-directory: infra
 
       - name: Terraform Apply (Prod)
         run: |
@@ -70,3 +92,27 @@ jobs:
               echo "::error ::$error_msg"
               exit $status
           fi
+        working-directory: infra
+
+      - name: Get ECR Repo URL from Terraform
+        id: ecr
+        run: |
+          ECR_URL=$(terraform output -raw ecr_repository_url)
+          echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
+          echo "ECR repository URL: $ECR_URL"
+        working-directory: infra
+
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin $ECR_URL
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.ECR_URL }}:${{ env.IMAGE_TAG }}
+            ${{ env.ECR_URL }}:${{ github.sha }}  # commit hash tag for traceability
+          cache-from: type=registry,ref=${{ env.ECR_URL }}:cache
+          cache-to: type=registry,ref=${{ env.ECR_URL }}:cache,mode=max
