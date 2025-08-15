@@ -1,3 +1,14 @@
+# --- Data ---
+# Commented out due to permission issues
+# data "aws_secretsmanager_secret" "dummy" {
+#   name = "/${var.name}/${var.env}/dummy_secret"
+# }
+
+# data "aws_secretsmanager_secret_version" "dummy" {
+#   secret_id = data.aws_secretsmanager_secret.dummy.id
+# }
+
+# --- ECS ---
 resource "aws_ecs_cluster" "this" {
   name = "${var.name}-${var.env}-cluster"
   tags = var.tags
@@ -23,6 +34,13 @@ resource "aws_ecs_task_definition" "this" {
         { name = "GREETING_MESSAGE", value = var.greeting_message },
         { name = "APP_VERSION", value = var.app_version }
       ]
+      # Commented secrets out due to permission issues
+      # secrets = [
+      #   {
+      #     name      = "DUMMY_SECRET"
+      #     valueFrom = data.aws_secretsmanager_secret_version.dummy.arn
+      #   }
+      # ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -50,21 +68,21 @@ resource "aws_ecs_service" "this" {
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
 
-  network_configuration {
-    subnets         = var.private_subnet_ids
-    security_groups = [var.ecs_service_sg_id]
-    assign_public_ip = false
-  }
-
-  load_balancer {
-    target_group_arn = var.target_group_arn
-    container_name   = var.name
-    container_port   = 80
-  }
-
   deployment_minimum_healthy_percent = 50
   deployment_maximum_percent         = 200
 
-  depends_on = [var.alb_listener_arn] # ensures ALB listener exists before service
-  tags       = var.tags
+  # Networking and ALB not available due to VPC limit
+  # network_configuration {
+  #   subnets         = var.private_subnet_ids
+  #   security_groups = [var.ecs_service_sg_id]
+  #   assign_public_ip = false
+  # }
+
+  # load_balancer {
+  #   target_group_arn = var.target_group_arn
+  #   container_name   = var.name
+  #   container_port   = 80
+  # }
+
+  tags = var.tags
 }

@@ -1,0 +1,72 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (e.g., 1.0.0)"
+        required: true
+        default: "1.0.0"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+
+    steps:
+      - name: Validate image tag
+        run: |
+          if [ -z "${IMAGE_TAG}" ]; then
+            echo "::error ::No image_tag provided. Production deploys require an explicit image tag."
+            exit 1
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.12.2
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Get ECR Repo URL from Terraform
+        id: ecr
+        run: |
+          ECR_URL=$(terraform output -raw ecr_repository_url)
+          echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
+
+          - name: Build and Push Docker Image (with cache)
+          uses: docker/build-push-action@v5
+          with:
+            context: .
+            push: true
+            tags: ${{ env.ECR_URL }}:${{ env.IMAGE_TAG }}
+            cache-from: type=registry,ref=${{ env.ECR_URL }}:cache
+            cache-to: type=registry,ref=${{ env.ECR_URL }}:cache,mode=max
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply (Prod)
+        run: |
+          set +e
+          output=$(terraform apply -auto-approve -var-file=prod.tfvars -var="image_tag=$IMAGE_TAG" 2>&1)
+          status=$?
+          echo "$output"
+          if [ $status -ne 0 ]; then
+              error_msg=$(echo "$output" | grep -m1 "Error:")
+              echo "::error ::$error_msg"
+              exit $status
+          fi

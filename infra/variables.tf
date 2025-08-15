@@ -57,3 +57,7 @@ variable "env" {
 variable "tags" {
   type = map(string)
 }
+
+variable "suffix" {
+  type = string
+}

@@ -7,14 +7,14 @@ module "ecr" {
   tags     = var.tags
 }
 
-# --- Network ---
-module "vpc" {
-  source = "./modules/network"
+# # --- Network ---
+# module "vpc" {
+#   source = "./modules/network"
 
-  name = var.name
-  env  = var.env
-  tags = var.tags
-}
+#   name = var.name
+#   env  = var.env
+#   tags = var.tags
+# }
 
 # --- CloudWatch Logs ---
 module "logs" {
@@ -34,6 +34,7 @@ module "iam" {
 
   name               = var.name
   env                = var.env
+  suffix             = var.suffix
   tags               = var.tags
   ecr_repository_arn = module.ecr.repository_arn
   log_group_arn      = module.logs.log_group_arn
@@ -44,15 +45,15 @@ module "iam" {
   ]
 }
 
-# --- ALB ---
-module "alb" {
-  source            = "./modules/alb"
-  name              = var.name
-  env               = var.env
-  vpc_id            = module.vpc.vpc_id
-  public_subnet_ids = module.vpc.public_subnet_ids
-  tags              = var.tags
-}
+# # --- ALB ---
+# module "alb" {
+#   source            = "./modules/alb"
+#   name              = var.name
+#   env               = var.env
+#   vpc_id            = module.vpc.vpc_id
+#   public_subnet_ids = module.vpc.public_subnet_ids
+#   tags              = var.tags
+# }
 
 # --- ECS ---
 module "ecs" {
@@ -75,8 +76,8 @@ module "ecs" {
   log_group_name     = module.logs.log_group_name
 
   desired_count       = var.desired_count
-  private_subnet_ids  = module.vpc.private_subnet_ids
-  ecs_service_sg_id   = module.alb.ecs_service_sg_id
-  target_group_arn    = module.alb.target_group_arn
-  alb_listener_arn    = module.alb.listener_arn
+  # private_subnet_ids  = module.vpc.private_subnet_ids
+  # ecs_service_sg_id   = module.alb.ecs_service_sg_id
+  # target_group_arn    = module.alb.target_group_arn
+  # alb_listener_arn    = module.alb.listener_arn
 }

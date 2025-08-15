@@ -1,8 +1,10 @@
 region      = "eu-central-1"
 aws_profile = "iac-task"
 
-name     = "iac-task-phase-tree"
+name     = "iac-phase-tree"
 ecr_name = "iac-task"
+
+image_tag = "latest"
 
 log_group_prefix   = "adrian-applogs"
 log_retention_days = 14
@@ -21,3 +23,4 @@ tags = {
   Creator = "adrian"
   Project = "iac-task"
 }
+suffix = "-v2"

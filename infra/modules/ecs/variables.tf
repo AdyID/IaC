@@ -74,6 +74,7 @@ variable "desired_count" {
 }
 
 variable "target_group_arn" {
+  type        = string
   description = "ARN of the ALB Target Group"
 }
 
@@ -83,9 +84,11 @@ variable "private_subnet_ids" {
 }
 
 variable "ecs_service_sg_id" {
+  type        = string
   description = "Security Group ID for ECS service"
 }
 
 variable "alb_listener_arn" {
+  type        = string
   description = "Listener ARN to depend on for ordering"
 }

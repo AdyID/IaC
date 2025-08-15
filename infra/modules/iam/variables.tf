@@ -22,3 +22,9 @@ variable "log_group_arn" {
   type        = string
   description = "ARN of the CloudWatch log group for log write permissions"
 }
+
+variable "suffix" {
+  type        = string
+  description = "Optional suffix to make IAM role names unique"
+  default     = ""
+}
