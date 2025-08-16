@@ -75,25 +75,13 @@ app/
 ### Docker Build
 ```bash
 # From project root directory
-docker build -t phasetree-app:latest .
+docker build -t iac-app:latest .
 
 # With specific tag
-docker build -t phasetree-app:1.0.0 .
+docker build -t iac-app:1.0.0 .
 ```
 
 ## Deployment Instructions
-
-### Local Docker Deployment
-```bash
-# Build and run locally
-docker build -t phasetree-app .
-docker run -p 8000:8000 \
-  -e LOG_LEVEL=INFO \
-  -e GREETING_MESSAGE="Welcome to Phase Science!" \
-  -e APP_VERSION=1.0.0 \
-  -e ENV=production \
-  phasetree-app
-```
 
 ### Production Deployment
 The application is designed to be deployed via GitHub Actions to AWS ECS:
@@ -173,13 +161,13 @@ rm -rf venv/
 ### Docker Cleanup
 ```bash
 # Stop running containers
-docker stop $(docker ps -q --filter ancestor=phasetree-app)
+docker stop $(docker ps -q --filter ancestor=iac-app)
 
 # Remove containers
-docker rm $(docker ps -aq --filter ancestor=phasetree-app)
+docker rm $(docker ps -aq --filter ancestor=iac-app)
 
 # Remove images
-docker rmi phasetree-app:latest
+docker rmi iac-app:latest
 
 # Clean up unused resources
 docker system prune -f

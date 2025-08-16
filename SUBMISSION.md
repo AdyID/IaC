@@ -1,4 +1,4 @@
-# PhaseTree IaC Assessment - Requirements Completion Status
+# IaC Assessment - Requirements Completion Status
 
 *This submission includes a fully containerized FastAPI application, Terraform IaC for AWS infrastructure, and CI/CD pipelines in GitHub Actions. All core requirements are implemented, with ECS services and ALB deployment blocked by AWS account limitations.*
 
@@ -47,7 +47,7 @@
 - **ECS Memory:** 512 MB
 - **Desired Count:** 1 task
 - **Environment Variables:**
-  - `GREETING_MESSAGE`: "Welcome to the PhaseTree code challenge interview development!"
+  - `GREETING_MESSAGE`: "Welcome to the code challenge development!"
   - `LOG_LEVEL`: "INFO"
   - `APP_VERSION`: "1.0.0"
 
@@ -56,7 +56,7 @@
 - **ECS Memory:** 1024 MB
 - **Desired Count:** 3 tasks
 - **Environment Variables:**
-  - `GREETING_MESSAGE`: "Welcome to the PhaseTree code challenge interview production!"
+  - `GREETING_MESSAGE`: "Welcome to the code challenge production!"
   - `LOG_LEVEL`: "INFO"
   - `APP_VERSION`: "1.0.0"
 

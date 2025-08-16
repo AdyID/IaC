@@ -14,7 +14,7 @@ task_memory   = 512
 desired_count = 1
 
 log_level        = "INFO"
-greeting_message = "Welcome to the PhaseTree code challenge interview development!"
+greeting_message = "Welcome to the iac code challenge interview development!"
 app_version      = "1.0.0"
 env              = "development"
 

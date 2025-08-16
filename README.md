@@ -1,4 +1,4 @@
-# PhaseTree IaC Project
+# IaC Project
 
 Infrastructure as Code (IaC) solution for deploying a containerized FastAPI application across development and production environments using Terraform and GitHub Actions.
 
